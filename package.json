@@ -1,0 +1,61 @@
+{
+  "name": "my-dynamic-project",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4",
+    "@dynamic-labs/sdk-react-core": "^3.0.0-alpha",
+    "viem": "*",
+    "@dynamic-labs/wagmi-connector": "^3.0.0-alpha",
+    "@tanstack/react-query": "^5.27.5",
+    "wagmi": "^2.5.7",
+    "@dynamic-labs/ethereum": "^3.0.0-alpha",
+    "@dynamic-labs/solana": "^3.0.0-alpha",
+    "@dynamic-labs/bitcoin": "^3.0.0-alpha",
+    "crypto-browserify": "^3.12.0",
+    "stream-browserify": "^3.0.0",
+    "process": "^0.11.10"
+  },
+  "scripts": {
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "browser": {
+    "crypto": false
+  },
+  "overrides": {
+    "rpc-websockets": "7.10.0",
+    "@solana/web3.js": "1.91.6",
+    "typescript": "4.9.5"
+  },
+  "devDependencies": {
+    "web-vitals": "^2.1.4",
+    "react-app-rewired": "^2.2.1"
+  }
+}
