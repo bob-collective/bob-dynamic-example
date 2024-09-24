@@ -29,7 +29,7 @@ export default function DynamicMethods({ isDarkMode }) {
   const { sdkHasLoaded, primaryWallet } = useDynamicContext();
   const userWallets = useUserWallets();
   const [isLoading, setIsLoading] = useState(true);
-  const [strategySlug, setStrategySlug] = useState()
+  const [strategySlug, setStrategySlug] = useState();
 
   const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet();
   const { data: strategies = [], isLoading: isStrategiesLoading } =
@@ -37,7 +37,7 @@ export default function DynamicMethods({ isDarkMode }) {
 
   useEffect(() => {
     if (strategies.length) setStrategySlug(strategies[0].raw.integration.slug);
-  }, [strategies])
+  }, [strategies]);
 
   useEffect(() => {
     if (sdkHasLoaded && isLoggedIn && primaryWallet) {
@@ -62,7 +62,9 @@ export default function DynamicMethods({ isDarkMode }) {
     queryFn: async () => {
       if (!currencyAmount) return;
 
-      const strategy = strategies.find(strategy => strategy.raw.integration.slug === strategySlug);
+      const strategy = strategies.find(
+        (strategy) => strategy.raw.integration.slug === strategySlug,
+      );
 
       const atomicAmount = currencyAmount.numerator.toString();
       const gatewayQuote = await gatewaySDK.getQuote({
@@ -157,19 +159,25 @@ export default function DynamicMethods({ isDarkMode }) {
           className="dynamic-methods"
           data-theme={isDarkMode ? 'dark' : 'light'}
         >
-          <div className="methods-container">
-            <select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
-              {strategies.map(strategy => (
-                <option key={strategy.raw.integration.slug} value={strategy.raw.integration.slug}>
+          <div
+            style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10 }}
+          >
+            <select
+              value={strategySlug}
+              onChange={(e) => setStrategySlug(e.target.value)}
+            >
+              {strategies.map((strategy) => (
+                <option
+                  key={strategy.raw.integration.slug}
+                  value={strategy.raw.integration.slug}
+                >
                   {strategy.raw.integration.name}
                 </option>
               ))}
             </select>
-          </div>
-          <div className="methods-container">
             {isBitcoinWallet(primaryWallet) && (
               <button
-                className="btn btn-primary btn-wide"
+                className="btn btn-primary"
                 onClick={onStakeClick}
                 disabled={isStrategiesLoading || !userHasEmbeddedWallet()}
               >
