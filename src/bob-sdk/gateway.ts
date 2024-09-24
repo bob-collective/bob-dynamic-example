@@ -1,5 +1,7 @@
 import { GatewaySDK } from '@gobob/bob-sdk';
 
-const gatewaySDK = new GatewaySDK('bob-sepolia');
+import { isProd } from '../constants/index.ts';
+
+const gatewaySDK = new GatewaySDK(isProd ? 'bob' : 'bob-sepolia');
 
 export { gatewaySDK };

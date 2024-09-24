@@ -1,3 +1,0 @@
-const TODO = '';
-
-export { TODO };

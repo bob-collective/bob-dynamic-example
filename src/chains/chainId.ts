@@ -13,7 +13,11 @@ export enum ChainId {
   OP = 10,
   MOONBEAM = 1284,
   MERLIN = 4200,
-  BITLAYER = 200901
+  BITLAYER = 200901,
 }
 
 export const testnetChainIds = [ChainId.SEPOLIA, ChainId.BOB_SEPOLIA, ChainId.OLD_BOB_SEPOLIA];
+
+export function isTestnetChainId(chainId: ChainId) {
+  return testnetChainIds.includes(chainId);
+}

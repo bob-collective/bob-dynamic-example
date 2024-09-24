@@ -1,1 +1,1 @@
-export { useGetStakingStrategies } from './useGetStakingStrategies.ts';
+export * from './useGetStakingStrategies.ts';

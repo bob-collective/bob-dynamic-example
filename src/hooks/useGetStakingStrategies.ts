@@ -1,10 +1,12 @@
-import { useCallback } from 'react';
 import { GatewayStrategyContract } from '@gobob/bob-sdk';
+import { useQuery } from '@tanstack/react-query';
 
-import { ChainId } from '../chains/index.ts';
+import { gatewaySDK } from '../bob-sdk/index.ts';
+import { useCallback } from 'react';
 import { ERC20Token, Ether, Token } from '../currency/index.ts';
+import { ChainId } from '../chains/chainId.ts';
 
-import { useGetStrategies } from './useGetStrategies.ts';
+const ONE_HOUR = 60 * 60 * 1000;
 
 type StrategyData = {
   raw: GatewayStrategyContract;
@@ -29,10 +31,14 @@ const useGetStakingStrategies = () => {
     [],
   );
 
-  return useGetStrategies({
+  return useQuery({
+    queryKey: ['staking-strategies'],
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    gcTime: ONE_HOUR,
+    queryFn: () => gatewaySDK.getStrategies(),
     select: selectStrategyData,
   });
 };
 
 export { useGetStakingStrategies };
-export type { StrategyData };

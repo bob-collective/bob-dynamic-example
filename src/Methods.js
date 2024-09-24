@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import './Methods.css';
-import { gatewaySDK } from './bob-sdk/gateway.ts';
+import { gatewaySDK } from './bob-sdk/index.ts';
 import { CurrencyAmount } from './currency/index.ts';
 import { useGetStakingStrategies } from './hooks/index.ts';
 import { signAllInputs } from './sats-wagmi/signAllInputs.ts';
@@ -33,23 +33,11 @@ export default function DynamicMethods({ isDarkMode }) {
   const { data: strategies = [], isLoading: isStrategiesLoading } =
     useGetStakingStrategies();
 
-  const onCreateWalletHandler = async () => {
-    if (!userHasEmbeddedWallet()) {
-      try {
-        await createEmbeddedWallet();
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  };
-
   useEffect(() => {
     if (sdkHasLoaded && isLoggedIn && primaryWallet) {
       setIsLoading(false);
     }
   }, [sdkHasLoaded, isLoggedIn, primaryWallet]);
-
-  // =====
 
   const strategy = strategies[0];
 
@@ -65,7 +53,7 @@ export default function DynamicMethods({ isDarkMode }) {
     isError: isQuoteError,
     error: quoteError,
   } = useQuery({
-    queryKey: ['deposit'],
+    queryKey: ['quoteData'],
     refetchInterval: 30 * 1000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -102,7 +90,7 @@ export default function DynamicMethods({ isDarkMode }) {
         throw new Error('Quote Data missing');
       }
 
-      if (!embeddedWallet) {
+      if (!evmAddress) {
         throw new Error('No embedded wallet');
       }
 
@@ -141,7 +129,7 @@ export default function DynamicMethods({ isDarkMode }) {
     },
   });
 
-  const onStakeClick = async (data) => {
+  const onStakeClick = async () => {
     if (!userHasEmbeddedWallet()) {
       try {
         await createEmbeddedWallet();
