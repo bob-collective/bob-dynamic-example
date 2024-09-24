@@ -1,11 +1,11 @@
-import { BitcoinWalletConnectors } from '@dynamic-labs/bitcoin';
-import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core';
+import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
+import { BitcoinWalletConnectors } from '@dynamic-labs/bitcoin';
 import { DynamicWagmiConnector } from '@dynamic-labs/wagmi-connector';
+import { createConfig, WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http } from 'viem';
 import { mainnet } from 'viem/chains';
-import { createConfig, WagmiProvider } from 'wagmi';
 import Main from './Main';
 
 const config = createConfig({
