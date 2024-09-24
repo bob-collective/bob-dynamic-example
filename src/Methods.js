@@ -1,29 +1,40 @@
-import { useState, useEffect } from 'react';
+import { isBitcoinWallet } from '@dynamic-labs/bitcoin';
 import {
   useDynamicContext,
+  useEmbeddedWallet,
   useIsLoggedIn,
   useUserWallets,
 } from '@dynamic-labs/sdk-react-core';
-import { isEthereumWallet } from '@dynamic-labs/ethereum';
-import { isSolanaWallet } from '@dynamic-labs/solana';
-import { isBitcoinWallet } from '@dynamic-labs/bitcoin';
-import { useEmbeddedWallet } from '@dynamic-labs/sdk-react-core';
+import { useEffect, useState } from 'react';
 
+import { useMutation, useQuery } from '@tanstack/react-query';
 import './Methods.css';
+import { gatewaySDK } from './bob-sdk/gateway.ts';
+import { CurrencyAmount } from './currency/index.ts';
+import { useGetStakingStrategies } from './hooks/index.ts';
+import { signAllInputs } from './sats-wagmi/signAllInputs.ts';
+import { BITCOIN } from './tokens/index.ts';
+
+const DEFAULT_GATEWAY_QUOTE_PARAMS = {
+  fromChain: 'bitcoin',
+  toChain: 'bob-sepolia',
+  fromToken: 'BTC',
+  // TODO: should be dynamic based on exchange rate
+  gasRefill: 2000,
+};
 
 export default function DynamicMethods({ isDarkMode }) {
   const isLoggedIn = useIsLoggedIn();
-  const { sdkHasLoaded, primaryWallet, user } = useDynamicContext();
+  const { sdkHasLoaded, primaryWallet } = useDynamicContext();
   const userWallets = useUserWallets();
   const [isLoading, setIsLoading] = useState(true);
-  const [result, setResult] = useState('');
-
-  // component declaration and all other logic you might need
 
   const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet();
+  const { data: strategies = [], isLoading: isStrategiesLoading } =
+    useGetStakingStrategies();
 
   const onCreateWalletHandler = async () => {
-    if (!userHasEmbeddedWallet) {
+    if (!userHasEmbeddedWallet()) {
       try {
         await createEmbeddedWallet();
       } catch (e) {
@@ -32,84 +43,120 @@ export default function DynamicMethods({ isDarkMode }) {
     }
   };
 
-  console.log('!userHasEmbeddedWallet()', !userHasEmbeddedWallet());
-
-  const safeStringify = (obj) => {
-    const seen = new WeakSet();
-    return JSON.stringify(
-      obj,
-      (key, value) => {
-        if (typeof value === 'object' && value !== null) {
-          if (seen.has(value)) {
-            return '[Circular]';
-          }
-          seen.add(value);
-        }
-        return value;
-      },
-      2,
-    );
-  };
-
   useEffect(() => {
     if (sdkHasLoaded && isLoggedIn && primaryWallet) {
       setIsLoading(false);
     }
   }, [sdkHasLoaded, isLoggedIn, primaryWallet]);
 
-  function clearResult() {
-    setResult('');
-  }
+  // =====
 
-  function showUser() {
-    setResult(safeStringify(user));
-  }
+  const strategy = strategies[0];
 
-  function showUserWallets() {
-    setResult(safeStringify(userWallets));
-  }
+  const currencyAmount = CurrencyAmount.fromBaseAmount(BITCOIN, 0.000035);
 
-  async function fetchPublicClient() {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) return;
+  const embeddedWallet = userWallets.find((wallet) => {
+    return wallet.chain === 'EVM';
+  });
 
-    const publicClient = await primaryWallet.getPublicClient();
-    setResult(safeStringify(publicClient));
-  }
+  const {
+    data: quoteData,
+    isLoading: isFetchingQuote,
+    isError: isQuoteError,
+    error: quoteError,
+  } = useQuery({
+    queryKey: ['deposit'],
+    refetchInterval: 30 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!currencyAmount) return;
 
-  async function fetchWalletClient() {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) return;
+      const atomicAmount = currencyAmount.numerator.toString();
+      const gatewayQuote = await gatewaySDK.getQuote({
+        ...DEFAULT_GATEWAY_QUOTE_PARAMS,
+        amount: atomicAmount,
+        gasRefill: DEFAULT_GATEWAY_QUOTE_PARAMS.gasRefill,
+        toChain: strategy.raw.chain.chainId,
+        toToken: strategy.raw.inputToken.address,
+        strategyAddress: strategy.raw.address,
+      });
 
-    const walletClient = await primaryWallet.getWalletClient();
-    setResult(safeStringify(walletClient));
-  }
+      const feeAmount = CurrencyAmount.fromRawAmount(BITCOIN, gatewayQuote.fee);
 
-  async function signMessage() {
-    if (!primaryWallet || !isEthereumWallet(primaryWallet)) return;
+      return {
+        fee: feeAmount,
+        gatewayQuote,
+      };
+    },
+  });
 
-    const signature = await primaryWallet.signMessage('Hello World');
-    setResult(signature);
-  }
+  const stakeMutation = useMutation({
+    mutationKey: ['stake'],
+    mutationFn: async ({ evmAddress, gatewayQuote }) => {
+      if (!primaryWallet) {
+        throw new Error('Connector missing');
+      }
 
-  async function fetchConnection() {
-    if (!primaryWallet || !isSolanaWallet(primaryWallet)) return;
+      if (!quoteData) {
+        throw new Error('Quote Data missing');
+      }
 
-    const connection = await primaryWallet.getConnection();
-    setResult(safeStringify(connection));
-  }
+      if (!embeddedWallet) {
+        throw new Error('No embedded wallet');
+      }
 
-  async function fetchSigner() {
-    if (!primaryWallet || !isSolanaWallet(primaryWallet)) return;
+      const btcPaymentWallet = primaryWallet.additionalAddresses.find(
+        (address) => address.type === 'payment',
+      );
 
-    const signer = await primaryWallet.getSigner();
-    setResult(safeStringify(signer));
-  }
+      const { uuid, psbtBase64 } = await gatewaySDK.startOrder(gatewayQuote, {
+        ...DEFAULT_GATEWAY_QUOTE_PARAMS,
+        toUserAddress: evmAddress,
+        fromUserAddress: btcPaymentWallet.address,
+        fromUserPublicKey: btcPaymentWallet.publicKey,
+      });
 
-  async function signMessage() {
-    if (!primaryWallet || !isSolanaWallet(primaryWallet)) return;
+      const bitcoinTxHex = await signAllInputs(
+        btcPaymentWallet.address,
+        psbtBase64,
+      );
 
-    const signature = await primaryWallet.signMessage('Hello World');
-    setResult(signature);
-  }
+      // NOTE: user does not broadcast the tx, that is done by
+      // the relayer after it is validated
+      const txid = await gatewaySDK.finalizeOrder(uuid, bitcoinTxHex);
+
+      const data = {
+        fee: quoteData.fee,
+      };
+
+      return { ...data, txid };
+    },
+    onSuccess: (data) => {
+      console.info('Success!');
+      if (data) console.log(JSON.stringify(data, null, 2));
+    },
+    onError: (error) => {
+      console.error(error);
+    },
+  });
+
+  const onStakeClick = async (data) => {
+    if (!userHasEmbeddedWallet()) {
+      try {
+        await createEmbeddedWallet();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (!quoteData) return console.error('Missing quote data');
+
+    return stakeMutation.mutate({
+      evmAddress: embeddedWallet.address,
+      gatewayQuote: quoteData.gatewayQuote,
+    });
+  };
 
   return (
     <>
@@ -119,58 +166,16 @@ export default function DynamicMethods({ isDarkMode }) {
           data-theme={isDarkMode ? 'dark' : 'light'}
         >
           <div className="methods-container">
-            <button className="btn btn-primary" onClick={showUser}>
-              Fetch User
-            </button>
-            <button className="btn btn-primary" onClick={showUserWallets}>
-              Fetch User Wallets
-            </button>
-
-            {isEthereumWallet(primaryWallet) && (
-              <>
-                <button className="btn btn-primary" onClick={fetchPublicClient}>
-                  Fetch Public Client
-                </button>
-                <button className="btn btn-primary" onClick={fetchWalletClient}>
-                  Fetch Wallet Client
-                </button>
-                <button className="btn btn-primary" onClick={signMessage}>
-                  Sign 'Hello World' on Ethereum
-                </button>
-              </>
-            )}
-
-            {isSolanaWallet(primaryWallet) && (
-              <>
-                <button className="btn btn-primary" onClick={fetchConnection}>
-                  Fetch Connection
-                </button>
-                <button className="btn btn-primary" onClick={fetchSigner}>
-                  Fetch Signer
-                </button>
-                <button className="btn btn-primary" onClick={signMessage}>
-                  Sign 'Hello World' on Solana
-                </button>
-              </>
+            {isBitcoinWallet(primaryWallet) && (
+              <button
+                className="btn btn-primary btn-wide"
+                onClick={onStakeClick}
+                disabled={isStrategiesLoading || !userHasEmbeddedWallet()}
+              >
+                Stake
+              </button>
             )}
           </div>
-          {result && (
-            <div className="results-container">
-              <pre className="results-text">
-                {result &&
-                  (typeof result === 'string' && result.startsWith('{')
-                    ? JSON.stringify(JSON.parse(result), null, 2)
-                    : result)}
-              </pre>
-            </div>
-          )}
-          {result && (
-            <div className="clear-container">
-              <button className="btn btn-primary" onClick={clearResult}>
-                Clear
-              </button>
-            </div>
-          )}
         </div>
       )}
     </>
