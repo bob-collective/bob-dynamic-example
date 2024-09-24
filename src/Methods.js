@@ -14,10 +14,11 @@ import { CurrencyAmount } from './currency/index.ts';
 import { useGetStakingStrategies } from './hooks/index.ts';
 import { signAllInputs } from './sats-wagmi/signAllInputs.ts';
 import { BITCOIN } from './tokens/index.ts';
+import { isProd } from './constants/chain.ts';
 
 const DEFAULT_GATEWAY_QUOTE_PARAMS = {
   fromChain: 'bitcoin',
-  toChain: 'bob-sepolia',
+  toChain: isProd ? 'bob' : 'bob-sepolia',
   fromToken: 'BTC',
   // TODO: should be dynamic based on exchange rate
   gasRefill: 2000,
@@ -28,10 +29,15 @@ export default function DynamicMethods({ isDarkMode }) {
   const { sdkHasLoaded, primaryWallet } = useDynamicContext();
   const userWallets = useUserWallets();
   const [isLoading, setIsLoading] = useState(true);
+  const [strategySlug, setStrategySlug] = useState()
 
   const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet();
   const { data: strategies = [], isLoading: isStrategiesLoading } =
     useGetStakingStrategies();
+
+  useEffect(() => {
+    if (strategies.length) setStrategySlug(strategies[0].raw.integration.slug);
+  }, [strategies])
 
   useEffect(() => {
     if (sdkHasLoaded && isLoggedIn && primaryWallet) {
@@ -39,13 +45,9 @@ export default function DynamicMethods({ isDarkMode }) {
     }
   }, [sdkHasLoaded, isLoggedIn, primaryWallet]);
 
-  const strategy = strategies[0];
-
   const currencyAmount = CurrencyAmount.fromBaseAmount(BITCOIN, 0.000035);
 
-  const embeddedWallet = userWallets.find((wallet) => {
-    return wallet.chain === 'EVM';
-  });
+  const embeddedWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
 
   const {
     data: quoteData,
@@ -59,6 +61,8 @@ export default function DynamicMethods({ isDarkMode }) {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (!currencyAmount) return;
+
+      const strategy = strategies.find(strategy => strategy.raw.integration.slug === strategySlug);
 
       const atomicAmount = currencyAmount.numerator.toString();
       const gatewayQuote = await gatewaySDK.getQuote({
@@ -153,6 +157,15 @@ export default function DynamicMethods({ isDarkMode }) {
           className="dynamic-methods"
           data-theme={isDarkMode ? 'dark' : 'light'}
         >
+          <div className="methods-container">
+            <select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
+              {strategies.map(strategy => (
+                <option key={strategy.raw.integration.slug} value={strategy.raw.integration.slug}>
+                  {strategy.raw.integration.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="methods-container">
             {isBitcoinWallet(primaryWallet) && (
               <button
