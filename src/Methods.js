@@ -49,12 +49,7 @@ export default function DynamicMethods({ isDarkMode }) {
 
   const embeddedWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
 
-  const {
-    data: quoteData,
-    isLoading: isFetchingQuote,
-    isError: isQuoteError,
-    error: quoteError,
-  } = useQuery({
+  const { data: quoteData, isLoading: isFetchingQuote } = useQuery({
     queryKey: ['quoteData'],
     refetchInterval: 30 * 1000,
     refetchOnMount: false,
@@ -179,7 +174,7 @@ export default function DynamicMethods({ isDarkMode }) {
               <button
                 className="btn btn-primary"
                 onClick={onStakeClick}
-                disabled={isStrategiesLoading || !userHasEmbeddedWallet()}
+                disabled={isStrategiesLoading || isFetchingQuote}
               >
                 Stake
               </button>
