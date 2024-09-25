@@ -1,43 +1,39 @@
-import { isBitcoinWallet } from '@dynamic-labs/bitcoin';
+import { useState, useEffect } from 'react';
 import {
   useDynamicContext,
-  useEmbeddedWallet,
   useIsLoggedIn,
   useUserWallets,
 } from '@dynamic-labs/sdk-react-core';
-import { useEffect, useState } from 'react';
+import { isEthereumWallet } from '@dynamic-labs/ethereum';
+import { isBitcoinWallet } from '@dynamic-labs/bitcoin';
+import { useEmbeddedWallet } from '@dynamic-labs/sdk-react-core';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
 import './Methods.css';
-import { gatewaySDK } from './bob-sdk/index.ts';
-import { CurrencyAmount } from './currency/index.ts';
-import { useGetStakingStrategies } from './hooks/index.ts';
-import { signAllInputs } from './sats-wagmi/signAllInputs.ts';
-import { BITCOIN } from './tokens/index.ts';
-import { isProd } from './constants/chain.ts';
-
-const DEFAULT_GATEWAY_QUOTE_PARAMS = {
-  fromChain: 'bitcoin',
-  toChain: isProd ? 'bob' : 'bob-sepolia',
-  fromToken: 'BTC',
-  // TODO: should be dynamic based on exchange rate
-  gasRefill: 2000,
-};
+import { useStakeMutation, useGetStakingStrategies } from './hooks/index.ts';
 
 export default function DynamicMethods({ isDarkMode }) {
   const isLoggedIn = useIsLoggedIn();
-  const { sdkHasLoaded, primaryWallet } = useDynamicContext();
+  const { sdkHasLoaded, primaryWallet, user } = useDynamicContext();
   const userWallets = useUserWallets();
   const [isLoading, setIsLoading] = useState(true);
-  const [strategySlug, setStrategySlug] = useState();
+  const [result, setResult] = useState('');
 
-  const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet();
-  const { data: strategies = [], isLoading: isStrategiesLoading } =
-    useGetStakingStrategies();
-
-  useEffect(() => {
-    if (strategies.length) setStrategySlug(strategies[0].raw.integration.slug);
-  }, [strategies]);
+    const safeStringify = (obj) => {
+      const seen = new WeakSet();
+      return JSON.stringify(
+        obj,
+        (key, value) => {
+          if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+              return '[Circular]';
+            }
+            seen.add(value);
+          }
+          return value;
+        },
+        2,
+      );
+    };
 
   useEffect(() => {
     if (sdkHasLoaded && isLoggedIn && primaryWallet) {
@@ -45,92 +41,54 @@ export default function DynamicMethods({ isDarkMode }) {
     }
   }, [sdkHasLoaded, isLoggedIn, primaryWallet]);
 
-  const currencyAmount = CurrencyAmount.fromBaseAmount(BITCOIN, 0.000035);
+  function clearResult() {
+    setResult('');
+  }
 
-  const embeddedWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
+  function showUser() {
+    setResult(safeStringify(user));
+  }
 
-  const { data: quoteData, isLoading: isFetchingQuote } = useQuery({
-    queryKey: ['quoteData'],
-    refetchInterval: 30 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    queryFn: async () => {
-      if (!currencyAmount) return;
+  function showUserWallets() {
+    setResult(safeStringify(userWallets));
+  }
 
-      const strategy = strategies.find(
-        (strategy) => strategy.raw.integration.slug === strategySlug,
-      );
+  async function fetchPublicClient() {
+    if (!primaryWallet || !isEthereumWallet(primaryWallet)) return;
 
-      const atomicAmount = currencyAmount.numerator.toString();
-      const gatewayQuote = await gatewaySDK.getQuote({
-        ...DEFAULT_GATEWAY_QUOTE_PARAMS,
-        amount: atomicAmount,
-        gasRefill: DEFAULT_GATEWAY_QUOTE_PARAMS.gasRefill,
-        toChain: strategy.raw.chain.chainId,
-        toToken: strategy.raw.inputToken.address,
-        strategyAddress: strategy.raw.address,
-      });
+    const publicClient = await primaryWallet.getPublicClient();
+    setResult(safeStringify(publicClient));
+  }
 
-      const feeAmount = CurrencyAmount.fromRawAmount(BITCOIN, gatewayQuote.fee);
+  async function fetchWalletClient() {
+    if (!primaryWallet || !isEthereumWallet(primaryWallet)) return;
 
-      return {
-        fee: feeAmount,
-        gatewayQuote,
-      };
-    },
-  });
+    const walletClient = await primaryWallet.getWalletClient();
+    setResult(safeStringify(walletClient));
+  }
 
-  const stakeMutation = useMutation({
-    mutationKey: ['stake'],
-    mutationFn: async ({ evmAddress, gatewayQuote }) => {
-      if (!primaryWallet) {
-        throw new Error('Connector missing');
-      }
+  async function signMessage() {
+    if (!primaryWallet || !isEthereumWallet(primaryWallet)) return;
 
-      if (!quoteData) {
-        throw new Error('Quote Data missing');
-      }
+    const signature = await primaryWallet.signMessage('Hello World');
+    setResult(signature);
+  }
 
-      if (!evmAddress) {
-        throw new Error('No embedded wallet');
-      }
+  async function fetchConnection() {
+    const connection = await primaryWallet.getConnection();
+    setResult(safeStringify(connection));
+  }
 
-      const btcPaymentWallet = primaryWallet.additionalAddresses.find(
-        (address) => address.type === 'payment',
-      );
+  async function fetchSigner() {
+    if (!primaryWallet) return;
 
-      const { uuid, psbtBase64 } = await gatewaySDK.startOrder(gatewayQuote, {
-        ...DEFAULT_GATEWAY_QUOTE_PARAMS,
-        toUserAddress: evmAddress,
-        fromUserAddress: btcPaymentWallet.address,
-        fromUserPublicKey: btcPaymentWallet.publicKey,
-      });
+    const signer = await primaryWallet.getSigner();
+    setResult(safeStringify(signer));
+  }
 
-      const bitcoinTxHex = await signAllInputs(
-        btcPaymentWallet.address,
-        psbtBase64,
-      );
+  const { createEmbeddedWallet, userHasEmbeddedWallet } = useEmbeddedWallet();
 
-      // NOTE: user does not broadcast the tx, that is done by
-      // the relayer after it is validated
-      const txid = await gatewaySDK.finalizeOrder(uuid, bitcoinTxHex);
-
-      const data = {
-        fee: quoteData.fee,
-      };
-
-      return { ...data, txid };
-    },
-    onSuccess: (data) => {
-      console.info('Success!');
-      if (data) console.log(JSON.stringify(data, null, 2));
-    },
-    onError: (error) => {
-      console.error(error);
-    },
-  });
-
-  const onStakeClick = async () => {
+  const createEmbeddedWalletHandler = async () => {
     if (!userHasEmbeddedWallet()) {
       try {
         await createEmbeddedWallet();
@@ -138,48 +96,81 @@ export default function DynamicMethods({ isDarkMode }) {
         console.error(e);
       }
     }
+  };
 
-    if (!quoteData) return console.error('Missing quote data');
+  const [strategySlug, setStrategySlug] = useState();
+  const { data: strategies = [], isLoading: isStrategiesLoading } =
+    useGetStakingStrategies();
+
+  useEffect(() => {
+    if (strategies.length) setStrategySlug(strategies[0].integration.slug);
+  }, [strategies]);
+
+  const strategy = strategies.find(strategy => strategy.integration.slug === strategySlug);
+  const stakeMutation = useStakeMutation({
+    strategy,
+    amount: 3100
+  });
+
+  const onStakeClick = async () => {
+    const embeddedWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
+    const btcWallet = userWallets.find((wallet) => wallet.chain === 'BTC');
 
     return stakeMutation.mutate({
-      evmAddress: embeddedWallet.address,
-      gatewayQuote: quoteData.gatewayQuote,
+      btcWallet,
+      evmAddress: embeddedWallet?.address,
     });
   };
 
   return (
     <>
       {!isLoading && (
-        <div
-          className="dynamic-methods"
-          data-theme={isDarkMode ? 'dark' : 'light'}
-        >
-          <div
-            style={{ display: 'inline-flex', alignItems: 'baseline', gap: 10 }}
-          >
-            <select
-              value={strategySlug}
-              onChange={(e) => setStrategySlug(e.target.value)}
-            >
-              {strategies.map((strategy) => (
-                <option
-                  key={strategy.raw.integration.slug}
-                  value={strategy.raw.integration.slug}
-                >
-                  {strategy.raw.integration.name}
-                </option>
-              ))}
-            </select>
-            {isBitcoinWallet(primaryWallet) && (
-              <button
-                className="btn btn-primary"
-                onClick={onStakeClick}
-                disabled={isStrategiesLoading || isFetchingQuote}
-              >
-                Stake
-              </button>
-            )}
+        <div className="dynamic-methods" data-theme={isDarkMode ? 'dark' : 'light'}>
+          <div className="methods-container">
+            <button className="btn btn-primary" onClick={showUser}>Fetch User</button>
+            <button className="btn btn-primary" onClick={showUserWallets}>Fetch User Wallets</button>
+
+            
+    {isEthereumWallet(primaryWallet) &&
+      <>
+        <button className="btn btn-primary" onClick={fetchPublicClient}>Fetch Public Client</button>
+        <button className="btn btn-primary" onClick={fetchWalletClient}>Fetch Wallet Client</button>
+        <button className="btn btn-primary" onClick={signMessage}>Sign 'Hello World' on Ethereum</button>    
+      </>
+    }
+  
+
+        {primaryWallet && (
+          <div>
+            {userHasEmbeddedWallet() && <>
+              <select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
+                {strategies.map((strategy) => (
+                  <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
+                ))}
+              </select>
+              <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading || userHasEmbeddedWallet()}>Stake</button>
+            </>}
+            {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>}
           </div>
+        )}
+
+        </div>
+          {result && (
+            <div className="results-container">
+              <pre className="results-text">
+                {result && (
+                  typeof result === "string" && result.startsWith("{")
+                  ? JSON.stringify(JSON.parse(result), null, 2)
+                  : result
+                )}
+              </pre>
+            </div>
+          )}
+          {result && (
+            <div className="clear-container">
+              <button className="btn btn-primary" onClick={clearResult}>Clear</button>
+            </div>
+          )}
         </div>
       )}
     </>
