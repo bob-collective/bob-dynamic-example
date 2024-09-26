@@ -1,8 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { gatewaySDK } from '../gateway/index.ts';
 import { signAllInputs } from '../utils/signAllInputs.ts';
-import { GatewayQuote, GatewayStrategyContract } from '@gobob/bob-sdk';
-
+import { GatewayStrategyContract } from '@gobob/bob-sdk';
 
 const SECONDS_30 = 30 * 1000;
 const isProduction = process.env.IS_PRODUCTION === 'true';
@@ -21,7 +20,7 @@ const useStakeMutation = ({
     gasRefill: 2000,
   };
 
-  const { data: quoteData, isLoading: isLoadingQuoteData } = useQuery({
+  const { data: gatewayQuote, isLoading: isLoadingQuoteData } = useQuery({
     queryKey: ['quoteData', strategy?.integration.slug, amount],
     refetchInterval: SECONDS_30,
     refetchOnMount: false,
@@ -36,9 +35,7 @@ const useStakeMutation = ({
         strategyAddress: strategy.address,
       });
 
-      return {
-        gatewayQuote,
-      };
+      return gatewayQuote;
     },
   });
 
@@ -53,7 +50,7 @@ const useStakeMutation = ({
       btcWalletAddress: string;
       btcWalletPublicKey: string;
     }) => {
-      if (!quoteData) {
+      if (!gatewayQuote) {
         throw new Error('Quote Data missing');
       }
 
@@ -61,7 +58,7 @@ const useStakeMutation = ({
         throw new Error('No embedded wallet');
       }
 
-      const { uuid, psbtBase64 } = await gatewaySDK.startOrder(quoteData.gatewayQuote, {
+      const { uuid, psbtBase64 } = await gatewaySDK.startOrder(gatewayQuote, {
         ...DEFAULT_GATEWAY_QUOTE_PARAMS,
         toUserAddress: evmAddress,
         fromUserAddress: btcWalletAddress,
@@ -83,7 +80,7 @@ const useStakeMutation = ({
     },
   });
 
-  return { stakeMutation, quoteData, isLoadingQuoteData };
+  return { stakeMutation, gatewayQuote, isLoadingQuoteData };
 };
 
 export { useStakeMutation };
