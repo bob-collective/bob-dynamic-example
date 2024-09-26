@@ -48,12 +48,10 @@ const useStakeMutation = ({
       evmAddress,
       btcWalletAddress,
       btcWalletPublicKey,
-      gatewayQuote,
     }: {
       evmAddress: string;
       btcWalletAddress: string;
       btcWalletPublicKey: string;
-      gatewayQuote: GatewayQuote;
     }) => {
       if (!quoteData) {
         throw new Error('Quote Data missing');
@@ -63,7 +61,7 @@ const useStakeMutation = ({
         throw new Error('No embedded wallet');
       }
 
-      const { uuid, psbtBase64 } = await gatewaySDK.startOrder(gatewayQuote, {
+      const { uuid, psbtBase64 } = await gatewaySDK.startOrder(quoteData.gatewayQuote, {
         ...DEFAULT_GATEWAY_QUOTE_PARAMS,
         toUserAddress: evmAddress,
         fromUserAddress: btcWalletAddress,
