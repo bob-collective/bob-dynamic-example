@@ -135,7 +135,7 @@ export default function DynamicMethods({ isDarkMode }) {
             <button className="btn btn-primary" onClick={showUserWallets}>Fetch User Wallets</button>
 
             
-    {isEthereumWallet(primaryWallet) &&
+    {primaryWallet && isEthereumWallet(primaryWallet) &&
       <>
         <button className="btn btn-primary" onClick={fetchPublicClient}>Fetch Public Client</button>
         <button className="btn btn-primary" onClick={fetchWalletClient}>Fetch Wallet Client</button>
