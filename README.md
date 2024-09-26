@@ -16,6 +16,4 @@ You may also see any lint errors in the console.
 ## Staking Flow
 Login using email or connect bitcoin wallet (tested with Xverse).
 
-![Stake button](assets/image.png)
-
-Clicking `Stake` button will create embedded ethereum wallet if does not exists. Signing transaction with bitcoin wallet will stake 3500 satoshi using selected strategy.
+Click `Create embedded wallet` then `Stake` button will appear. Signing transaction with bitcoin wallet will stake 3100 satoshi using selected strategy.
