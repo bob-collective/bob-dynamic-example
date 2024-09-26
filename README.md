@@ -2,7 +2,7 @@
 
 ## Env variables
 - REACT_APP_ENV_ID - environment id. Get one from [Dynamic dashboard](https://app.dynamic.xyz/dashboard/developer/api). ⚠️ It's important to turn off **Create on Sign up** toggle in [SDK & API keys section](https://app.dynamic.xyz/dashboard/embedded-wallets/dynamic).
-- REACT_APP_L1_CHAIN - layer1 chain id. Use e.g. *sepolia chain id* **11155111** to interact with testnet api, *ethereum chain id* **1** for mainnet api.
+- REACT_APP_IS_PRODUCTION - true | false. Whether to use mainnet or testnet api.
 
 ## Scripts
 ### `npm start`
