@@ -31,7 +31,7 @@ const Main = () => {
         <DynamicMethods isDarkMode={isDarkMode} />
       </div>
       <div className="footer">
-        <div className="footer-text">Made with ❤️ by dynamic</div>
+        <div className="footer-text">Made with ❤️ by dynamic and bob</div>
         <img className="footer-image" src={isDarkMode ? "/image-dark.png" : "/image-light.png"} alt="dynamic" />
       </div>
     </div> 
