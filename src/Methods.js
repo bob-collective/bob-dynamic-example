@@ -153,7 +153,7 @@ export default function DynamicMethods({ isDarkMode }) {
               </select>
               <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></> :
               <p>Please connect btc and evm wallets</p>}
-            {/* {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>} */}
+            {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>}
           </div>
         )}
 
