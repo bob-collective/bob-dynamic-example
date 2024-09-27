@@ -118,11 +118,10 @@ export default function DynamicMethods({ isDarkMode }) {
 
   const onStakeClick = async () => {
     if (!evmWallet || !btcWallet) return null;
-    if (!isBitcoinWallet(primaryWallet)) return null;
 
     return stakeMutation.mutate({
       evmAddress: evmWallet?.address,
-      primaryWallet
+      btcWallet
     });
   };
 
@@ -146,14 +145,14 @@ export default function DynamicMethods({ isDarkMode }) {
 
         {primaryWallet && (
           <div>
-            {evmWallet && btcWallet ? isBitcoinWallet(primaryWallet) ?
+            {evmWallet && btcWallet ?
               <><select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
                 {strategies.map((strategy) => (
                   <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
                 ))}
               </select>
               <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></> :
-              <p>Please switch to btc wallet</p> : <p>Please connect btc and evm wallets</p>}
+              <p>Please connect btc and evm wallets</p>}
             {/* {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>} */}
           </div>
         )}

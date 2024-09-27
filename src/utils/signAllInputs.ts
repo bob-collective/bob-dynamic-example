@@ -2,7 +2,7 @@ import { Transaction } from '@scure/btc-signer';
 import { base64 } from '@scure/base';
 import { BitcoinWallet } from '@dynamic-labs/bitcoin';
 
-async function signAllInputs(primaryWallet: BitcoinWallet, paymentAddress: string, psbtBase64: string) {
+async function signAllInputs(btcWallet: BitcoinWallet, paymentAddress: string, psbtBase64: string) {
   // Sign all inputs with the payment address
   const unsignedTx = Transaction.fromPSBT(base64.decode(psbtBase64));
   const inputLength = unsignedTx.inputsLength;
@@ -20,7 +20,7 @@ async function signAllInputs(primaryWallet: BitcoinWallet, paymentAddress: strin
   };
 
   // Request the wallet to sign the PSBT
-  const signedPsbt = await primaryWallet.signPsbt(params);
+  const signedPsbt = await btcWallet.signPsbt(params);
   if (!signedPsbt) {
     throw new Error("Not signed")
   }

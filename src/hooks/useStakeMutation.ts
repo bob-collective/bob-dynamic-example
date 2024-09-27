@@ -44,10 +44,10 @@ const useStakeMutation = ({
     mutationKey: ['stake', isProduction],
     mutationFn: async ({
       evmAddress,
-      primaryWallet,
+      btcWallet,
     }: {
       evmAddress: string;
-      primaryWallet: BitcoinWallet
+      btcWallet: BitcoinWallet
     }) => {
       if (!gatewayQuote) {
         throw new Error('Quote Data missing');
@@ -57,7 +57,7 @@ const useStakeMutation = ({
         throw new Error('No embedded wallet');
       }
 
-      const btcPaymentWallet = primaryWallet.additionalAddresses.find(
+      const btcPaymentWallet = btcWallet.additionalAddresses.find(
         (address) => address.type === 'payment',
       )!;
 
@@ -68,7 +68,7 @@ const useStakeMutation = ({
         fromUserPublicKey: btcPaymentWallet.publicKey,
       });
 
-      const bitcoinTxHex = await signAllInputs(primaryWallet, btcPaymentWallet.address, psbtBase64);
+      const bitcoinTxHex = await signAllInputs(btcWallet, btcPaymentWallet.address, psbtBase64);
 
       const txid = await gatewaySDK.finalizeOrder(uuid, bitcoinTxHex);
 
