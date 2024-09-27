@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { gatewaySDK } from '../gateway/index.ts';
-import { signAllInputs } from '../utils/signAllInputs.ts';
+import { SignAllInputs } from '../utils/signAllInputs.ts';
 import { GatewayStrategyContract } from '@gobob/bob-sdk';
 
 const SECONDS_30 = 30 * 1000;
@@ -65,7 +65,7 @@ const useStakeMutation = ({
         fromUserPublicKey: btcWalletPublicKey,
       });
 
-      const bitcoinTxHex = await signAllInputs(btcWalletAddress, psbtBase64);
+      const bitcoinTxHex = await SignAllInputs(btcWalletAddress, psbtBase64);
 
       const txid = await gatewaySDK.finalizeOrder(uuid, bitcoinTxHex);
 
