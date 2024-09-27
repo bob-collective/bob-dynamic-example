@@ -1,12 +1,8 @@
 import { Transaction } from '@scure/btc-signer';
 import { base64 } from '@scure/base';
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
-import { isBitcoinWallet } from '@dynamic-labs/bitcoin';
+import { BitcoinWallet } from '@dynamic-labs/bitcoin';
 
-async function SignAllInputs(paymentAddress: string, psbtBase64: string) {
-  const { primaryWallet } = useDynamicContext();
-  if (!isBitcoinWallet(primaryWallet!)) return null;
-
+async function signAllInputs(primaryWallet: BitcoinWallet, paymentAddress: string, psbtBase64: string) {
   // Sign all inputs with the payment address
   const unsignedTx = Transaction.fromPSBT(base64.decode(psbtBase64));
   const inputLength = unsignedTx.inputsLength;
@@ -35,4 +31,4 @@ async function SignAllInputs(paymentAddress: string, psbtBase64: string) {
   return signedTx.hex;
 }
 
-export { SignAllInputs };
+export { signAllInputs };

@@ -117,15 +117,12 @@ export default function DynamicMethods({ isDarkMode }) {
   const btcWallet = userWallets.find((wallet) => wallet.chain === 'BTC');
 
   const onStakeClick = async () => {
-    if (!evmWallet || !btcWallet) return;
-    const btcPaymentWallet = btcWallet.additionalAddresses.find(
-      (address) => address.type === 'payment',
-    );
+    if (!evmWallet || !btcWallet) return null;
+    if (!isBitcoinWallet(primaryWallet)) return null;
 
     return stakeMutation.mutate({
       evmAddress: evmWallet?.address,
-      btcWalletAddress: btcPaymentWallet.address,
-      btcWalletPublicKey: btcPaymentWallet.publicKey,
+      primaryWallet
     });
   };
 
@@ -149,12 +146,14 @@ export default function DynamicMethods({ isDarkMode }) {
 
         {primaryWallet && (
           <div>
-            {evmWallet && btcWallet && <><select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
-              {strategies.map((strategy) => (
-                <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
-              ))}
-            </select>
-            <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></>}
+            {evmWallet && btcWallet ? isBitcoinWallet(primaryWallet) ?
+              <><select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
+                {strategies.map((strategy) => (
+                  <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
+                ))}
+              </select>
+              <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></> :
+              <p>Please switch to btc wallet</p> : <p>Please connect btc and evm wallets</p>}
             {/* {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>} */}
           </div>
         )}

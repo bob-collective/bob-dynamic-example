@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { gatewaySDK } from '../gateway/index.ts';
-import { SignAllInputs } from '../utils/signAllInputs.ts';
+import { signAllInputs } from '../utils/signAllInputs.ts';
 import { GatewayStrategyContract } from '@gobob/bob-sdk';
+import { BitcoinWallet } from '@dynamic-labs/bitcoin';
 
 const SECONDS_30 = 30 * 1000;
-const isProduction = process.env.IS_PRODUCTION === 'true';
+const isProduction = process.env.REACT_APP_IS_PRODUCTION === 'true';
 
 const useStakeMutation = ({
   strategy,
@@ -43,12 +44,10 @@ const useStakeMutation = ({
     mutationKey: ['stake', isProduction],
     mutationFn: async ({
       evmAddress,
-      btcWalletAddress,
-      btcWalletPublicKey,
+      primaryWallet,
     }: {
       evmAddress: string;
-      btcWalletAddress: string;
-      btcWalletPublicKey: string;
+      primaryWallet: BitcoinWallet
     }) => {
       if (!gatewayQuote) {
         throw new Error('Quote Data missing');
@@ -58,14 +57,18 @@ const useStakeMutation = ({
         throw new Error('No embedded wallet');
       }
 
+      const btcPaymentWallet = primaryWallet.additionalAddresses.find(
+        (address) => address.type === 'payment',
+      )!;
+
       const { uuid, psbtBase64 } = await gatewaySDK.startOrder(gatewayQuote, {
         ...DEFAULT_GATEWAY_QUOTE_PARAMS,
         toUserAddress: evmAddress,
-        fromUserAddress: btcWalletAddress,
-        fromUserPublicKey: btcWalletPublicKey,
+        fromUserAddress: btcPaymentWallet.address,
+        fromUserPublicKey: btcPaymentWallet.publicKey,
       });
 
-      const bitcoinTxHex = await SignAllInputs(btcWalletAddress, psbtBase64);
+      const bitcoinTxHex = await signAllInputs(primaryWallet, btcPaymentWallet.address, psbtBase64);
 
       const txid = await gatewaySDK.finalizeOrder(uuid, bitcoinTxHex);
 
