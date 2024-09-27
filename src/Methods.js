@@ -5,7 +5,6 @@ import {
   useUserWallets,
 } from '@dynamic-labs/sdk-react-core';
 import { isEthereumWallet } from '@dynamic-labs/ethereum';
-import { isBitcoinWallet } from '@dynamic-labs/bitcoin';
 import { useEmbeddedWallet } from '@dynamic-labs/sdk-react-core';
 
 import './Methods.css';
@@ -152,7 +151,7 @@ export default function DynamicMethods({ isDarkMode }) {
                 ))}
               </select>
               <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></> :
-              <p>Please connect btc and evm wallets</p>}
+              <p>Please connect Bitcoin and EVM wallets</p>}
             {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>}
           </div>
         )}

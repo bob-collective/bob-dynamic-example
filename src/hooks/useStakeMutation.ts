@@ -68,7 +68,7 @@ const useStakeMutation = ({
         fromUserPublicKey: btcPaymentWallet.publicKey,
       });
 
-      const bitcoinTxHex = await signAllInputs(btcWallet, btcPaymentWallet.address, psbtBase64);
+      const bitcoinTxHex = await signAllInputs(btcWallet, btcPaymentWallet.address, psbtBase64!);
 
       const txid = await gatewaySDK.finalizeOrder(uuid, bitcoinTxHex);
 
