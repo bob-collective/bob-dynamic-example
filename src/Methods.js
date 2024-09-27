@@ -112,15 +112,17 @@ export default function DynamicMethods({ isDarkMode }) {
     amount: 3100
   });
 
+  
   const onStakeClick = async () => {
-    const embeddedWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
+    const evmWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
     const btcWallet = userWallets.find((wallet) => wallet.chain === 'BTC');
     const btcPaymentWallet = btcWallet.additionalAddresses.find(
       (address) => address.type === 'payment',
     );
+    if (!evmWallet) return;
 
     return stakeMutation.mutate({
-      evmAddress: embeddedWallet?.address,
+      evmAddress: evmWallet?.address,
       btcWalletAddress: btcPaymentWallet.address,
       btcWalletPublicKey: btcPaymentWallet.publicKey,
     });
@@ -146,15 +148,13 @@ export default function DynamicMethods({ isDarkMode }) {
 
         {primaryWallet && (
           <div>
-            {userHasEmbeddedWallet() && <>
-              <select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
-                {strategies.map((strategy) => (
-                  <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
-                ))}
-              </select>
-              <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading || !userHasEmbeddedWallet()}>Stake</button>
-            </>}
-            {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>}
+            <select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
+              {strategies.map((strategy) => (
+                <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button>
+            {/* {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>} */}
           </div>
         )}
 
