@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   useDynamicContext,
   useIsLoggedIn,
@@ -115,14 +115,24 @@ export default function DynamicMethods({ isDarkMode }) {
   const evmWallet = userWallets.find((wallet) => wallet.chain === 'EVM');
   const btcWallet = userWallets.find((wallet) => wallet.chain === 'BTC');
 
-  const onStakeClick = async () => {
+  const onStakeClick = useCallback(async () => {
+    if (!userHasEmbeddedWallet()) {
+      console.log('creating embedded wallet')
+      try {
+        const wallet = await createEmbeddedWallet();
+        console.log('embedded wallet created', wallet)
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     if (!evmWallet || !btcWallet) return null;
 
     return stakeMutation.mutate({
       evmAddress: evmWallet?.address,
       btcWallet
     });
-  };
+  }, [btcWallet, createEmbeddedWallet, evmWallet, stakeMutation, userHasEmbeddedWallet]);
 
   return (
     <>
@@ -144,15 +154,13 @@ export default function DynamicMethods({ isDarkMode }) {
 
         {primaryWallet && (
           <div>
-            {evmWallet && btcWallet ?
-              <><select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
-                {strategies.map((strategy) => (
-                  <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
-                ))}
-              </select>
-              <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></> :
-              <p>Please connect Bitcoin and EVM wallets</p>}
-            {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>}
+            <><select value={strategySlug} onChange={(e) => setStrategySlug(e.target.value)}>
+              {strategies.map((strategy) => (
+                <option key={strategy.integration.slug} value={strategy.integration.slug}>{strategy.integration.name}</option>
+              ))}
+            </select>
+            <button className="btn btn-primary" onClick={onStakeClick} disabled={isStrategiesLoading}>Stake</button></> 
+            {/* {!userHasEmbeddedWallet() && <button className="btn btn-primary" onClick={createEmbeddedWalletHandler} disabled={isStrategiesLoading}>Create embedded wallet</button>} */}
           </div>
         )}
 
